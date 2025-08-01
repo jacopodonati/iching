@@ -294,6 +294,21 @@ char *get_variation(unsigned char beginning, unsigned char end) {
   return diff_bits_str;
 }
 
+// Robert Jenkins' 96 bit Mix Function
+unsigned long mix(unsigned long a, unsigned long b, unsigned long c)
+{
+  a=a-b;  a=a-c;  a=a^(c >> 13);
+  b=b-c;  b=b-a;  b=b^(a << 8);
+  c=c-a;  c=c-b;  c=c^(b >> 13);
+  a=a-b;  a=a-c;  a=a^(c >> 12);
+  b=b-c;  b=b-a;  b=b^(a << 16);
+  c=c-a;  c=c-b;  c=c^(b >> 5);
+  a=a-b;  a=a-c;  a=a^(c >> 3);
+  b=b-c;  b=b-a;  b=b^(a << 10);
+  c=c-a;  c=c-b;  c=c^(b >> 15);
+  return c;
+}
+
 /**
  * E poi si inizia...
  */
@@ -351,7 +366,12 @@ int main(int argc, char *argv[]) {
     pthread_t threads[COINS];
     ThreadParams thread_params[COINS];
 
-    srand(time(NULL));
+    /* Prima srand() veniva inizializzata con time(NULL), ma ciò dava
+     * chiari problemi quando veniva chiamato molte volte.  Ora il risultato
+     * sembra più accurato.
+     */
+    unsigned long seed = mix(clock(), time(NULL), getpid());
+    srand(seed);
 
     if (!options.no_wait) {
       printf("Premi un tasto per lanciare le monete...");
