@@ -123,6 +123,7 @@ typedef struct Options {
   int unicode;
   int lookup;
   int verbose;
+  int csv;
 } Options;
 
 /***
@@ -169,6 +170,18 @@ int kbhit() {
 }
 
 /***
+ * get_timestamp() è una semplice funzione che ritorna il timestamp.
+ * Viene chiamata tanto da throw_a_coin quanto nel caso di stampa del
+ * risultato come righe CSV, e perciò ha senso che sia scorporata.
+ */
+
+time_t get_timestamp() {
+  struct timespec ts;
+  clock_gettime(CLOCK_REALTIME, &ts);
+  return (ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
+}
+
+/***
  * Qui abbiamo la funzione che viene lanciata dai singoli thread.  Ogni
  * utilizzo corrisponde al lancio di una moneta.
  *
@@ -188,7 +201,7 @@ int kbhit() {
 void *throw_a_coin(void *arg) {
   struct timespec ts;
   clock_gettime(CLOCK_REALTIME, &ts);
-  time_t timestamp = ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+  time_t timestamp = get_timestamp();
 
   ThreadParams *params = (ThreadParams *)arg;
   ThreadData *data = &(params->thread_data);
@@ -315,16 +328,18 @@ unsigned long mix(unsigned long a, unsigned long b, unsigned long c)
 
 int main(int argc, char *argv[]) {
   setlocale(LC_ALL, "");
-  Options options = {0, 0, 0, 0};
+  Options options = {0, 0, 0, 0, 0};
   int option;
 
   static struct option long_options[] = {{"no-wait", no_argument, 0, 'w'},
                                          {"unicode", no_argument, 0, 'u'},
                                          {"lookup", no_argument, 0, 'l'},
                                          {"verbose", no_argument, 0, 'v'},
+                                         {"csv", no_argument, 0, 'c'},
                                          {0, 0, 0, 0}};
 
-  while ((option = getopt_long(argc, argv, "wuv", long_options, NULL)) != -1) {
+  while ((option = getopt_long(argc, argv, "wuvlc::", long_options, NULL)) !=
+         -1) {
     switch (option) {
     case 'w':
       options.no_wait = 1;
@@ -334,6 +349,8 @@ int main(int argc, char *argv[]) {
       break;
     case 'l':
       options.lookup = 1;
+    case 'c':
+      options.csv = 1;
       break;
     case '?':
       fprintf(stderr, "Opzione non riconosciuta\n");
@@ -377,6 +394,7 @@ int main(int argc, char *argv[]) {
       printf("Premi un tasto per lanciare le monete...");
       fflush(stdout);
     }
+
     for (int i = 0; i < THROWS; i++) {
       if (!options.no_wait) {
         while (!kbhit()) {
@@ -412,7 +430,9 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  if (!options.csv) {
   printf("\033[2K\r");
+  }
   response = split_hex(response);
   int beginning_number = get_hexagram_number(response.beginning);
   int beginning_hex = 0x4DBF + beginning_number;
@@ -423,6 +443,9 @@ int main(int argc, char *argv[]) {
     if (options.unicode) {
       wprintf(L"%lc %d%s -> %lc %d\n", (wchar_t)(beginning_hex),
               beginning_number, diff_bits, (wchar_t)(end_hex), end_number);
+    } else if (options.csv) {
+      time_t now = get_timestamp();
+      printf("%ld,%d,primary\r\n%ld,%d,secondary\r\n", now, beginning_number, now, end_number);
     } else {
       printf("%d%s -> %d\n", beginning_number, diff_bits, end_number);
     }
@@ -430,7 +453,10 @@ int main(int argc, char *argv[]) {
   } else {
     if (options.unicode) {
       wprintf(L"%lc %d\n", (wchar_t)(beginning_hex), beginning_number);
-    } else {
+    } else if (options.csv) {
+      time_t now = get_timestamp();
+      printf("%ld,%d,static\r\n", now, beginning_number);
+    }else {
       printf("%d\n", beginning_number);
     }
   }
