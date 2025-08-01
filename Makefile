@@ -4,9 +4,9 @@ TARGET = iching
 SRCS = main.c
 OBJS = $(SRCS:.c=.o)
 
-.PHONY: all clean
+.PHONY: all install clean
 
-all: $(TARGET)
+all: $(TARGET) install clean
 
 $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $^
@@ -17,3 +17,5 @@ $(TARGET): $(OBJS)
 clean:
 	rm -f $(TARGET) $(OBJS)
 
+install:
+	mv $(TARGET) $(HOME)/.local/bin
