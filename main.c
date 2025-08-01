@@ -307,6 +307,25 @@ char *get_variation(unsigned char beginning, unsigned char end) {
   return diff_bits_str;
 }
 
+/**
+ * Poi, una funzione che controlla se la stringa passata come argomento a
+ * `--lookup` è valida, ossia se è composta da sei cifre tra 6 e 9.
+ */
+
+int is_valid_lookup_string(const char *str) {
+  if (strlen(str) != 6) {
+    printf("La stringa deve essere lunga 6 caratteri.\n");
+    return 0;
+  }
+  for (int i = 0; i < 6; i++) {
+    if (str[i] < '6' || str[i] > '9') {
+      printf("La stringa deve essere composta da cifre tra 6 e 9.\n");
+      return 0;
+    }
+  }
+  return 1;
+}
+
 // Robert Jenkins' 96 bit Mix Function
 unsigned long mix(unsigned long a, unsigned long b, unsigned long c)
 {
@@ -330,10 +349,11 @@ int main(int argc, char *argv[]) {
   setlocale(LC_ALL, "");
   Options options = {0, 0, 0, 0, 0};
   int option;
+  char *lookup_string = NULL;
 
   static struct option long_options[] = {{"no-wait", no_argument, 0, 'w'},
                                          {"unicode", no_argument, 0, 'u'},
-                                         {"lookup", no_argument, 0, 'l'},
+                                         {"lookup", optional_argument, 0, 'l'},
                                          {"verbose", no_argument, 0, 'v'},
                                          {"csv", no_argument, 0, 'c'},
                                          {0, 0, 0, 0}};
@@ -349,6 +369,10 @@ int main(int argc, char *argv[]) {
       break;
     case 'l':
       options.lookup = 1;
+      if (optarg) {
+        lookup_string = optarg;
+      }
+      break;
     case 'c':
       options.csv = 1;
       break;
@@ -363,6 +387,11 @@ int main(int argc, char *argv[]) {
   Response response;
 
   if (options.lookup) {
+    if (lookup_string && is_valid_lookup_string(lookup_string)) {
+      for (int i = 0; i < THROWS; i++) {
+        response.raw[i] = lookup_string[i] - '0';
+      }
+    } else {
     int counter = 0;
     char input;
 
@@ -376,6 +405,7 @@ int main(int argc, char *argv[]) {
         counter++;
       } else {
         continue;
+        }
       }
     }
   } else {
