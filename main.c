@@ -27,6 +27,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <wchar.h>
+#include <string.h>
 
 /***
  * Per prima cosa, definiamo cos'è un oggetto Hexagram, ossia l'esagramma,
